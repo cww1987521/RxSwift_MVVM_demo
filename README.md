@@ -1,2 +1,4 @@
 # RxSwift_MVVM_demo
 使用RxSwift框架和MVVM模式的小demo
+
+学习了俩周的RxSwift，这算是是个一小步，还有很多不明白的地方，期待以后更进一步
