@@ -32,18 +32,18 @@ class ViewController: UIViewController {
         self.searchBar = UISearchBar(frame: CGRect(x: 0, y: 0, width: self.view.frame.width, height: 56))
         self.tableView.tableHeaderView = self.searchBar
         
-        let searchAction = searchBar.rx.text.orEmpty
-            .throttle(0.5, scheduler: MainScheduler.instance)
+        let searchAction = searchBar.rx.text.orEmpty.asDriver()
+            .throttle(0.5)
             .distinctUntilChanged()
-            .asObservable()
+        
         
         //初始化viewModel
         let viewModel = GitHubViewModel(searchAction: searchAction)
         
         //viewModel中的navigationTitle绑定到导航栏title属性
-        viewModel.navigationTitle.bind(to: self.navigationItem.rx.title).disposed(by: disposeBag)
+        viewModel.navigationTitle.drive(self.navigationItem.rx.title).disposed(by: disposeBag)
         //viewModel中的repositories仓库数组绑定到tableView的items属性
-        viewModel.repositories.bind(to: tableView.rx.items){ (tv, row, element) in
+        viewModel.repositories.drive(tableView.rx.items){ (tv, row, element) in
             let cell = UITableViewCell(style: .subtitle, reuseIdentifier: "Cell")
             cell.textLabel?.text = element.name
             cell.detailTextLabel?.text = element.htmlUrl

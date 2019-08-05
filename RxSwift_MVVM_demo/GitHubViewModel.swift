@@ -10,27 +10,27 @@
 import Foundation
 import RxSwift
 import Result
-
+import RxCocoa
 
 class GitHubViewModel {
     /****** 输入部分 *****/
     //查询行为
-    fileprivate let searchAction:Observable<String>
+    fileprivate let searchAction:Driver<String>
     
     /****** 输出部分 ******/
     //查询结果
-    let searcheResult: Observable<GitHubRepositories>
+    let searcheResult: Driver<GitHubRepositories>
     //查询结果中的list
-    let repositories: Observable<[GitHubRepository]>
+    let repositories: Driver<[GitHubRepository]>
     
     //清空结果的action
-    let cleanResult: Observable<Void>
+    let cleanResult: Driver<Void>
     
     //导航栏标题
-    let navigationTitle: Observable<String>
+    let navigationTitle: Driver<String>
     
     //viewModel初始化（根据输入实现对应的输出）
-    init(searchAction:Observable<String>) {
+    init(searchAction:Driver<String>) {
         self.searchAction = searchAction
         
         //生成查询结果序列
@@ -40,12 +40,9 @@ class GitHubViewModel {
                 GitHubProvider.rx.request(.resposotories(str))
                 .filterSuccessfulStatusCodes()
                 .mapObject(GitHubRepositories.self)
-                .asObservable()
-                    .catchError({ error in
-                        print("发生错误：")
-                        return Observable<GitHubRepositories>.empty()
-                    })
-        }.share(replay: 1, scope: SubjectLifetimeScope.whileConnected)
+                .asDriver(onErrorDriveWith: Driver.empty())
+                
+        }
         
         //生成清空结果动作的序列，是个空序列
         self.cleanResult = searchAction
@@ -55,13 +52,16 @@ class GitHubViewModel {
         }
         
         //生成查询结果里的资源列表序列（如果查询到结果则返回结果，如果是清空数据则返回空数组）
-        self.repositories = Observable.of(searcheResult.map{$0.items},cleanResult.map{[]}).merge()
+        self.repositories = Driver.merge(
+            searcheResult.map{$0.items},
+            cleanResult.map{[]}
+        )
         
         //生成导航栏标题序列（如果查询到结果则返回数量，如果是清空数据则返回默认标题）
-        self.navigationTitle = Observable.of(
+        self.navigationTitle = Driver.merge(
             searcheResult.map{"共有\($0.totalCount!)个结果"},
             cleanResult.map{"搜索"}
-        ).merge()
+        )
     }
     
 }
